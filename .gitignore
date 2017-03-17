@@ -1,0 +1,4 @@
+__pycache__
+.DS_Store
+site_credentials.py
+JournalArticles/__pycache__
