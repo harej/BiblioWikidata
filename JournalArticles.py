@@ -515,7 +515,10 @@ def item_creator(manifest):
     for new_entry in retrieved_data:
         data = new_entry['statements']
         label = new_entry['label']
-        i = wdi_core.WDItemEngine(data=data, item_name=label)
+        i = wdi_core.WDItemEngine(
+            data=data,
+            item_name=label,
+            domain='journalarticles')
         try:
             i.write(WIKI_SESSION)
         except Exception as e:
