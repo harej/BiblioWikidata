@@ -1,4 +1,7 @@
+import arrow
 import html
+import requests
+from wikidataintegrator import wdi_core, wdi_login
 
 def bundle_maker(biglist, size=200):
     """
