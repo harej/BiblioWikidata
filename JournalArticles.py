@@ -143,9 +143,10 @@ def get_data(manifest):
     """
 
     # To prevent weirdness from unexpected values
-    for thing in manifest.keys():
-        if thing not in ['pmid', 'pmcid', 'doi', 'data']:
-            raise ValueError('The only permitted keys are doi, pmcid, pmid, and data')
+    for entry in manifest:
+        for thing in entry.keys():
+            if thing not in ['pmid', 'pmcid', 'doi', 'data']:
+                raise ValueError('The only permitted keys are doi, pmcid, pmid, and data')
 
     months = {
         'Jan': '01',
