@@ -187,19 +187,15 @@ def get_data(manifest):
             statements = entry['data']
 
         # Instance of: scientific article
-        statements.append(wdi_core.WDItemID(value='Q180686', prop_nr='P31'))
+        statements.append(wdi_core.WDItemID(value='Q13442814', prop_nr='P31'))
 
         if 'pmid' in entry:
-            if 'pmid' is not None:
-                statements.append(wdi_core.WDString(value=entry['pmid'], prop_nr='P698'))
+            if entry['pmid'] is not None:
+                statements.append(wdi_core.WDExternalID(entry['pmid'], prop_nr='P698'))
 
         if 'pmcid' in entry:
-            if 'pmcid' is not None:
-                statements.append(wdi_core.WDString(value=entry['pmcid'], prop_nr='P932'))
-
-        if 'doi' in entry:
-            if 'doi' is not None:
-                statements.append(wdi_core.WDString(value=entry['doi'], prop_nr='P356'))
+            if entry['pmcid'] is not None:
+                statements.append(wdi_core.WDExternalID(entry['pmcid'], prop_nr='P932'))
 
         package.append({'statements': statements, 'raw_data': {}, 'label': ''})
 
@@ -279,16 +275,32 @@ def get_data(manifest):
                 package[counter]['label'] = doi_data['title']
 
             if 'DOI' in doi_data and statement_doi is None:
-                statement_doi = wdi_core.WDString(
-                                    value=doi_data['DOI'],
+                statement_doi = wdi_core.WDExternalID(
+                                    doi_data['DOI'].upper(),
                                     prop_nr='P356',
                                     references=doi_ref)
                 package[counter]['statements'].append(statement_doi)
 
-            if 'created' in doi_data and statement_pubdate is None:
-                to_add = '+' + doi_data['created']['date-time']
+            if 'issued' in doi_data and statement_pubdate is None:
+                date_parts = doi_data['issued']['date-parts'][0]
+
+                y = str(date_parts[0])
+                m = '00'
+                d = '00'
+
+                precision = 9
+                if len(date_parts) >= 2:
+                    m = str(date_parts[1]).zfill(2)
+                    precision = 10
+
+                if len(date_parts) == 3:
+                    d = str(date_parts[2]).zfill(2)
+                    precision = 11
+
+                to_add = '+{0}-{1}-{2}T00:00:00Z'.format(y, m, d)
                 statement_pubdate = wdi_core.WDTime(
                                         to_add,
+                                        precision=precision,
                                         prop_nr='P577',
                                         references=doi_ref)
                 package[counter]['statements'].append(statement_pubdate)
@@ -371,29 +383,29 @@ def get_data(manifest):
                 for block in pubmed_data['articleids']:
                     if block['idtype'] == 'pmc' and statement_pmcid is None:
                         pmcid = block['value'].replace('PMC', '')
-                        statement_pmcid = wdi_core.WDString(
-                                              value=pmcid,
+                        statement_pmcid = wdi_core.WDExternalID(
+                                              pmcid,
                                               prop_nr='P932',
                                               references=pubmed_ref)
                         package[counter]['statements'].append(statement_pmcid)
                     elif block['idtype'] == 'pmcid' and statement_pmcid is None:
                         pmcid = block['value'].replace('PMC', '')
-                        statement_pmcid = wdi_core.WDString(
-                                              value=pmcid,
+                        statement_pmcid = wdi_core.WDExternalID(
+                                              pmcid,
                                               prop_nr='P932',
                                               references=pubmed_ref)
                         package[counter]['statements'].append(statement_pmcid)
                     elif block['idtype'] == 'doi' and statement_doi is None:
-                        doi = block['value']
-                        statement_doi = wdi_core.WDString(
-                                            value=doi,
+                        doi = block['value'].upper()
+                        statement_doi = wdi_core.WDExternalID(
+                                            doi,
                                             prop_nr='P356',
                                             references=pubmed_ref)
                         package[counter]['statements'].append(statement_doi)
                     elif block['idtype'] in ['pmid', 'pubmed'] and statement_pmid is None:
                         pmid = block['value']
-                        statement_pmid = wdi_core.WDString(
-                                             value=pmid,
+                        statement_pmid = wdi_core.WDExternalID(
+                                             pmid,
                                              prop_nr='P698',
                                              references=pubmed_ref)
                         package[counter]['statements'].append(statement_pmid)
@@ -408,11 +420,18 @@ def get_data(manifest):
                     else:
                         m = '00'
                 if len(pubdate_raw) == 3:  # Precision to the day
-                    pubdate = "+{0}-{1}-{2}T00:00:00Z".format(
-                                  pubdate_raw[0],
-                                  m,
-                                  pubdate_raw[2].zfill(2))
-                    precision = 11
+                    allowed_dates = [str(x).zfill(2) for x in range(1, 32)]
+                    if pubdate_raw.zfill(2) in allowed_dates:
+                        pubdate = "+{0}-{1}-{2}T00:00:00Z".format(
+                                      pubdate_raw[0],
+                                      m,
+                                      pubdate_raw[2].zfill(2))
+                        precision = 11
+                    else:
+                        pubdate = "+{0}-{1}-00T00:00:00Z".format(
+                                      pubdate_raw[0],
+                                      m)
+                        precision = 10
                 elif len(pubdate_raw) == 2:  # Precision to the month
                     pubdate = "+{0}-{1}-00T00:00:00Z".format(
                                   pubdate_raw[0],
@@ -424,12 +443,13 @@ def get_data(manifest):
                     precision = 9
 
                 if pubdate is not None and precision is not None:
-                    statement_pubdate = wdi_core.WDTime(
-                                            pubdate,
-                                            precision=precision,
-                                            prop_nr='P577',
-                                            references=pubmed_ref)
-                    package[counter]['statements'].append(statement_pubdate)
+                    if re.match(r'\+\d{4}-\d{2}-\d{2}T00:00:00Z', pubdate) is not None:
+                        statement_pubdate = wdi_core.WDTime(
+                                                pubdate,
+                                                precision=precision,
+                                                prop_nr='P577',
+                                                references=pubmed_ref)
+                        package[counter]['statements'].append(statement_pubdate)
 
             if 'issn' in pubmed_data and statement_publishedin is None:
                 if pubmed_data['issn'] != '':
@@ -522,8 +542,11 @@ def item_creator(manifest):
             data=data,
             item_name=label,
             domain='journalarticles')
+        i.set_label(label)
         try:
-            i.write(WIKI_SESSION)
+            print(i.write(WIKI_SESSION))
         except Exception as e:
             print(e)
+            from pprint import pprint
+            pprint(i.wd_json_representation)
             continue
