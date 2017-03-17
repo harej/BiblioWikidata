@@ -283,7 +283,7 @@ def get_data(manifest):
                 package[counter]['statements'].append(statement_doi)
 
             if 'created' in doi_data and statement_pubdate is None:
-                to_add = doi_data['created']['date-time']
+                to_add = '+' + doi_data['created']['date-time']
                 statement_pubdate = wdi_core.WDTime(
                                         to_add,
                                         prop_nr='P577',
