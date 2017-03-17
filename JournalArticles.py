@@ -29,7 +29,7 @@ def generate_refsnak(source, url, date):
 
     return [[wdi_core.WDItemID(is_reference=True, value=source, prop_nr='P248'),
              wdi_core.WDUrl(is_reference=True, value=url, prop_nr='P854'),
-             wdi_core.WDTime(is_reference=True, time=date, prop_nr='P813')]]
+             wdi_core.WDTime(date, is_reference=True, prop_nr='P813')]]
 
 def issn_to_wikidata(issn):
     """
@@ -285,7 +285,7 @@ def get_data(manifest):
             if 'created' in doi_data and statement_pubdate is None:
                 to_add = doi_data['created']['date-time'].split('T')[0]
                 statement_pubdate = wdi_core.WDTime(
-                                        value=to_add,
+                                        to_add,
                                         prop_nr='P577',
                                         references=doi_ref)
                 package[counter]['statements'].append(statement_pubdate)
@@ -422,7 +422,7 @@ def get_data(manifest):
 
                 if pubdate is not None and precision is not None:
                     statement_pubdate = wdi_core.WDTime(
-                                            value=pubdate,
+                                            pubdate,
                                             precision=precision,
                                             prop_nr='P577',
                                             references=pubmed_ref)
