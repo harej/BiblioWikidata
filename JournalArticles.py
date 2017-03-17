@@ -1,5 +1,6 @@
 import arrow
 import html
+import re
 import requests
 from wikidataintegrator import wdi_core, wdi_login
 from .site_credentials import *
@@ -16,6 +17,33 @@ def bundle_maker(biglist, size=200):
     """
 
     return [biglist[x:x+size] for x in range(0, len(biglist), size)]
+
+def clean_title(raw_input):
+    """
+    Removes formatting weirdness from title strings.
+
+    @param raw_input: the raw, unsanitized input
+    @return cleaned string
+    """
+
+    if raw_input == '':
+        return raw_input
+
+    t = raw_input
+    t = html.unescape(t)
+    t = t.strip()
+    if t[-1:] == '.':
+        t = t[:-1]
+    if t[0] == '[' and t[-1:] == ']':
+        t = t[1:-1]
+
+    # Strip HTML tags
+    t = re.sub(r'\</?(.|sub|sup)\>', '', t)
+    # Strip newlines and other weirdness
+    t = t.replace('\n', ' ')
+    t = re.sub(r' {2,}', ' ', t)
+
+    return t
 
 def generate_refsnak(source, url, date):
     """
@@ -116,18 +144,19 @@ def get_doi_org(identifiers):
 
     headers = {"Accept": "application/json"}
     for doi in identifiers:
-        r = requests.get('https://doi.org/' + doi, headers=headers)
+        if doi is not None:
+            r = requests.get('https://doi.org/' + doi, headers=headers)
 
-        if r.status_code != 200:
-            continue
+            if r.status_code != 200:
+                continue
 
-        try:
-            package[doi] = r.json()
-        except:
-            continue
+            try:
+                package[doi] = r.json()
+            except:
+                continue
 
-        package[doi]['__querydate'] = '+' + arrow.utcnow().format('YYYY-MM-DD') \
-                                    + 'T00:00:00Z'
+            package[doi]['__querydate'] = '+' + arrow.utcnow().format('YYYY-MM-DD') \
+                                        + 'T00:00:00Z'
 
     return package
 
@@ -266,8 +295,9 @@ def get_data(manifest):
                           doi_data['__querydate'])
 
             if 'title' in doi_data and statement_title is None:
+                t = clean_title(doi_data['title'])
                 statement_title = wdi_core.WDMonolingualText(
-                                      value=doi_data['title'],
+                                      value=t,
                                       prop_nr='P1476',
                                       references=doi_ref,
                                       language='en')
@@ -284,26 +314,27 @@ def get_data(manifest):
             if 'issued' in doi_data and statement_pubdate is None:
                 date_parts = doi_data['issued']['date-parts'][0]
 
-                y = str(date_parts[0])
-                m = '00'
-                d = '00'
+                if date_parts != [None]:
+                    y = str(date_parts[0])
+                    m = '00'
+                    d = '00'
 
-                precision = 9
-                if len(date_parts) >= 2:
-                    m = str(date_parts[1]).zfill(2)
-                    precision = 10
+                    precision = 9
+                    if len(date_parts) >= 2:
+                        m = str(date_parts[1]).zfill(2)
+                        precision = 10
 
-                if len(date_parts) == 3:
-                    d = str(date_parts[2]).zfill(2)
-                    precision = 11
+                    if len(date_parts) == 3:
+                        d = str(date_parts[2]).zfill(2)
+                        precision = 11
 
-                to_add = '+{0}-{1}-{2}T00:00:00Z'.format(y, m, d)
-                statement_pubdate = wdi_core.WDTime(
-                                        to_add,
-                                        precision=precision,
-                                        prop_nr='P577',
-                                        references=doi_ref)
-                package[counter]['statements'].append(statement_pubdate)
+                    to_add = '+{0}-{1}-{2}T00:00:00Z'.format(y, m, d)
+                    statement_pubdate = wdi_core.WDTime(
+                                            to_add,
+                                            precision=precision,
+                                            prop_nr='P577',
+                                            references=doi_ref)
+                    package[counter]['statements'].append(statement_pubdate)
 
             if 'ISSN' in doi_data and statement_publishedin is None:
                 journal = issn_to_wikidata(doi_data['ISSN'][0])
@@ -328,6 +359,14 @@ def get_data(manifest):
                                       references=doi_ref)
                 package[counter]['statements'].append(statement_issue)
 
+            if 'page' in doi_data and statement_pages is None:
+                if doi_data['page'] != '' and doi_data['page'] is not None:
+                    statement_pages = wdi_core.WDString(
+                                          value=doi_data['page'],
+                                          prop_nr='P304',
+                                          references=doi_ref)
+                    package[counter]['statements'].append(statement_pages)
+
             if 'author' in doi_data and statement_authors == []:
                 author_counter = 0
                 for author in doi_data['author']:
@@ -337,7 +376,7 @@ def get_data(manifest):
                         a = author['family']
                     if 'given' in author:
                         a = author['given'] + ' ' + a
-
+                    a = clean_title(a)
                     qualifier = wdi_core.WDString(
                                     value=str(author_counter),
                                     prop_nr='P1545',
@@ -360,17 +399,8 @@ def get_data(manifest):
                              pubmed_data['__querydate'])
 
             if 'title' in pubmed_data and statement_title is None:
-                t = html.unescape(pubmed_data['title'])
+                t = clean_title(pubmed_data['title'])
                 if t != '':
-                    if t[-1:] == '.':
-                        t = t[:-1]
-                    if t[0] == '[' and t[-1:] == ']':
-                        t = t[1:-1]
-
-                    # Strip HTML tags
-                    t = re.sub(r'\</?(.|sub|sup)\>', '', t)
-
-                    # After all processing is done:
                     statement_title = wdi_core.WDMonolingualText(
                                           value=t,
                                           prop_nr='P1476',
@@ -501,12 +531,13 @@ def get_data(manifest):
                 for author in pubmed_data['authors']:
                     if author['authtype'] == "Author":
                         author_counter += 1
+                        a = clean_title(author['name'])
                         qualifier = wdi_core.WDString(
                                         value=str(author_counter),
                                         prop_nr='P1545',
                                         is_qualifier=True)
                         statement_author = wdi_core.WDString(
-                                               value=author['name'],
+                                               value=a,
                                                prop_nr='P2093',
                                                qualifiers=[qualifier],
                                                references=doi_ref)
@@ -538,6 +569,8 @@ def item_creator(manifest):
     for new_entry in retrieved_data:
         data = new_entry['statements']
         label = new_entry['label']
+        if label == '':
+            continue
         i = wdi_core.WDItemEngine(
             data=data,
             item_name=label,
@@ -547,6 +580,4 @@ def item_creator(manifest):
             print(i.write(WIKI_SESSION))
         except Exception as e:
             print(e)
-            from pprint import pprint
-            pprint(i.wd_json_representation)
             continue
