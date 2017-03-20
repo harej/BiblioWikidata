@@ -12,6 +12,10 @@ There are docstrings throughout the code files. You may peruse those.
 
 But generally, the only thing that's really been implemented at the moment is the ability to create new Wikidata items in bulk.
 
+## Setting your username and password
+First, you must set your username and password. Make a duplicate of `site_credentials.py.sample` and save it as `site_credentials.py`. Fill in your Wikidata username and password. If you have two-factor authentication enabled, you will need to create a (https://www.wikidata.org/wiki/Special:BotPasswords)[bot password]. Remember to set the permissions to the file so that others can't read your username and password!
+
+## Creating Wikidata entries on journal articles based on DOIs.
 Sample program: You have a list of DOIs saved at `doi_list.csv`.
 
 ```python
