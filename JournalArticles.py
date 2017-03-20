@@ -108,8 +108,8 @@ def get_pubmed(identifiers, dbname='pubmed'):
 
         summary_retriever = requests.get(esummary_url + bunch_of_numbers).json()
 
-        if "result" in summary_retriever_json:
-            for _, pmid_blob in summary_retriever_json["result"].items():
+        if "result" in summary_retriever:
+            for _, pmid_blob in summary_retriever["result"].items():
                 if _ == "uids":
                     continue
 
@@ -218,23 +218,16 @@ def get_data(manifest):
         # Instance of: scientific article
         statements.append(wdi_core.WDItemID(value='Q13442814', prop_nr='P31'))
 
-        if 'pmid' in entry:
-            if entry['pmid'] is not None:
-                statements.append(wdi_core.WDExternalID(entry['pmid'], prop_nr='P698'))
-
-        if 'pmcid' in entry:
-            if entry['pmcid'] is not None:
-                statements.append(wdi_core.WDExternalID(entry['pmcid'], prop_nr='P932'))
-
         package.append({'statements': statements, 'raw_data': {}, 'label': ''})
 
         # Append to the lookup lists. API lookups are done in bulk to cut down
         # on HTTP requests.
         for id_name, id_value in entry.items():
-            if id_name != 'doi' and 'doi' in entry:
-                continue  #
+            if id_value is None:
+                continue
             if id_name == 'pmcid' and 'pmid' in entry:
-                continue  # we don't need pmcid if we already have pmid
+                if entry['pmid'] is not None:
+                    continue  # we don't need pmcid if we already have pmid
             lookup[id_name].append(id_value)
             associator[id_name][id_value] = counter
 
@@ -434,11 +427,12 @@ def get_data(manifest):
                         package[counter]['statements'].append(statement_doi)
                     elif block['idtype'] in ['pmid', 'pubmed'] and statement_pmid is None:
                         pmid = block['value']
-                        statement_pmid = wdi_core.WDExternalID(
-                                             pmid,
-                                             prop_nr='P698',
-                                             references=pubmed_ref)
-                        package[counter]['statements'].append(statement_pmid)
+                        if pmid != 0 and pmid != '0':
+                            statement_pmid = wdi_core.WDExternalID(
+                                                 pmid,
+                                                 prop_nr='P698',
+                                                 references=pubmed_ref)
+                            package[counter]['statements'].append(statement_pmid)
 
             if 'pubdate' in pubmed_data and statement_pubdate is None:
                 pubdate = None
@@ -451,7 +445,7 @@ def get_data(manifest):
                         m = '00'
                 if len(pubdate_raw) == 3:  # Precision to the day
                     allowed_dates = [str(x).zfill(2) for x in range(1, 32)]
-                    if pubdate_raw.zfill(2) in allowed_dates:
+                    if pubdate_raw[2].zfill(2) in allowed_dates:
                         pubdate = "+{0}-{1}-{2}T00:00:00Z".format(
                                       pubdate_raw[0],
                                       m,
@@ -540,7 +534,7 @@ def get_data(manifest):
                                                value=a,
                                                prop_nr='P2093',
                                                qualifiers=[qualifier],
-                                               references=doi_ref)
+                                               references=pubmed_ref)
                         statement_authors.append(statement_author)
                 for statement in statement_authors:
                     package[counter]['statements'].append(statement)
