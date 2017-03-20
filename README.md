@@ -6,16 +6,24 @@ Python 3.5 or higher is required.
 
 This makes use of the WikidataIntegrator library. You can easily install it with `pip3 install wikidataintegrator`.
 
+# Setup
+
+## Downloading and installing
+
+Clone this project to the directory containing your Python scripts. `git clone https://github.com/harej/BiblioWikidata`
+
+If your project is itself a git project, you should make BiblioWikidata a submodule. `git submodule add https://github.com/harej/BiblioWikidata`.
+
+## Setting username and password
+First, you must set your username and password. Make a duplicate of `site_credentials.py.sample` and save it as `site_credentials.py`. Fill in your Wikidata username and password. If you have two-factor authentication enabled, you will need to create a (https://www.wikidata.org/wiki/Special:BotPasswords)[bot password]. Remember to set the permissions to the file so that others can't read your username and password!
+
 # Usage
 
 There are docstrings throughout the code files. You may peruse those.
 
 But generally, the only thing that's really been implemented at the moment is the ability to create new Wikidata items in bulk.
 
-## Setting your username and password
-First, you must set your username and password. Make a duplicate of `site_credentials.py.sample` and save it as `site_credentials.py`. Fill in your Wikidata username and password. If you have two-factor authentication enabled, you will need to create a (https://www.wikidata.org/wiki/Special:BotPasswords)[bot password]. Remember to set the permissions to the file so that others can't read your username and password!
-
-## Creating Wikidata entries on journal articles based on DOIs.
+## Creating Wikidata entries on journal articles
 Sample program: You have a list of DOIs saved at `doi_list.csv`.
 
 ```python
