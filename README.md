@@ -15,7 +15,7 @@ Clone this project to the directory containing your Python scripts. `git clone h
 If your project is itself a git project, you should make BiblioWikidata a submodule. `git submodule add https://github.com/harej/BiblioWikidata`.
 
 ## Setting username and password
-First, you must set your username and password. Make a duplicate of `site_credentials.py.sample` and save it as `site_credentials.py`. Fill in your Wikidata username and password. If you have two-factor authentication enabled, you will need to create a (https://www.wikidata.org/wiki/Special:BotPasswords)[bot password]. Remember to set the permissions to the file so that others can't read your username and password!
+First, you must set your username and password. Make a duplicate of `site_credentials.py.sample` and save it as `site_credentials.py`. Fill in your Wikidata username and password. If you have two-factor authentication enabled, you will need to create a [bot password](https://www.wikidata.org/wiki/Special:BotPasswords). Remember to set the permissions to the file so that others can't read your username and password!
 
 # Usage
 
