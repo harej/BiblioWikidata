@@ -46,4 +46,7 @@ def main():
 	manifest = [{'doi': x} for x in list_of_DOIs]
 
 	JournalArticles.item_creator(manifest)
+
+if __name__ == '__main__':
+	main()
 ```
