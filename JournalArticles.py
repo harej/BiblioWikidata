@@ -223,7 +223,7 @@ def get_data(manifest):
         # Append to the lookup lists. API lookups are done in bulk to cut down
         # on HTTP requests.
         for id_name, id_value in entry.items():
-            if id_value is None:
+            if id_name == 'data' or id_value is None:  # not an ID
                 continue
             if id_name == 'pmcid' and 'pmid' in entry:
                 if entry['pmid'] is not None:
