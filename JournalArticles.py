@@ -2,6 +2,7 @@ import arrow
 import html
 import re
 import requests
+import urllib.parse
 from wikidataintegrator import wdi_core, wdi_login
 from .site_credentials import *
 
@@ -29,6 +30,9 @@ def clean_title(raw_input):
     if raw_input == '':
         return raw_input
 
+    if raw_input is None:
+        return ''
+
     t = raw_input
     t = html.unescape(t)
     t = t.strip()
@@ -38,7 +42,7 @@ def clean_title(raw_input):
         t = t[1:-1]
 
     # Strip HTML tags
-    t = re.sub(r'\</?(.|sub|sup)\>', '', t)
+    t = re.sub(r'\</?(.|sub|sup|strong|em)\>', '', t)
     # Strip newlines and other weirdness
     t = t.replace('\n', ' ')
     t = re.sub(r' {2,}', ' ', t)
@@ -73,7 +77,10 @@ def issn_to_wikidata(issn):
     issn_query_url = ('https://query.wikidata.org/sparql?format=json'
                       '&query=select%20%3Fi%20%3Fissn%20where%20%7B'
                       '%20%3Fi%20wdt%3AP236%20%22{0}%22%20%7D')
-    issn_query = requests.get(issn_query_url.format(issn)).json()
+    try:
+        issn_query = requests.get(issn_query_url.format(issn)).json()
+    except:
+        return None
     issn_results = issn_query['results']['bindings']
     if len(issn_results) == 1:  # We want no ambiguity here
         journal = issn_results[0]['i']['value']
@@ -157,7 +164,6 @@ def get_doi_org(identifiers):
 
             package[doi]['__querydate'] = '+' + arrow.utcnow().format('YYYY-MM-DD') \
                                         + 'T00:00:00Z'
-
     return package
 
 def get_data(manifest):
@@ -284,18 +290,21 @@ def get_data(manifest):
         if doi_data != {}:
             doi_ref = generate_refsnak(
                           'Q28946522',
-                          'https://doi.org/' + manifest[counter]['doi'],
+                          'https://doi.org/' + urllib.parse.quote_plus(manifest[counter]['doi']),
                           doi_data['__querydate'])
 
             if 'title' in doi_data and statement_title is None:
                 t = clean_title(doi_data['title'])
-                statement_title = wdi_core.WDMonolingualText(
-                                      value=t,
-                                      prop_nr='P1476',
-                                      references=doi_ref,
-                                      language='en')
-                package[counter]['statements'].append(statement_title)
-                package[counter]['label'] = doi_data['title']
+                if t != '' and t is not None and len(t) < 400:
+                    statement_title = wdi_core.WDMonolingualText(
+                                          value=t,
+                                          prop_nr='P1476',
+                                          references=doi_ref,
+                                          language='en')
+                    package[counter]['statements'].append(statement_title)
+
+                    if len(t) < 250:
+                        package[counter]['label'] = doi_data['title']
 
             if 'DOI' in doi_data and statement_doi is None:
                 statement_doi = wdi_core.WDExternalID(
@@ -393,14 +402,16 @@ def get_data(manifest):
 
             if 'title' in pubmed_data and statement_title is None:
                 t = clean_title(pubmed_data['title'])
-                if t != '':
+                if t != '' and len(t) < 400:
                     statement_title = wdi_core.WDMonolingualText(
                                           value=t,
                                           prop_nr='P1476',
                                           references=pubmed_ref,
                                           language='en')
                     package[counter]['statements'].append(statement_title)
-                    package[counter]['label'] = t
+
+                    if len(t < 250):
+                        package[counter]['label'] = t
 
             if 'articleids' in pubmed_data:
                 for block in pubmed_data['articleids']:
