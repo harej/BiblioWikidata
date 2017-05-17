@@ -582,7 +582,9 @@ def item_creator(manifest):
             domain='journalarticles')
         i.set_label(label)
         try:
-            print(i.write(WIKI_SESSION))
+            res = i.write(WIKI_SESSION)
+            print(res)
+            yield res
         except Exception as e:
             print(e)
             continue
