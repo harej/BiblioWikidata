@@ -42,7 +42,7 @@ def clean_title(raw_input):
         t = t[1:-1]
 
     # Strip HTML tags
-    t = re.sub(r'\</?(.|sub|sup|strong|em)\>', '', t)
+    t = re.sub(r'<[^>]*?>', '', t)
     # Strip newlines and other weirdness
     t = t.replace('\n', ' ')
     t = re.sub(r' {2,}', ' ', t)
@@ -304,7 +304,7 @@ def get_data(manifest):
                     package[counter]['statements'].append(statement_title)
 
                     if len(t) < 250:
-                        package[counter]['label'] = doi_data['title']
+                        package[counter]['label'] = t
 
             if 'DOI' in doi_data and statement_doi is None:
                 statement_doi = wdi_core.WDExternalID(
@@ -410,7 +410,7 @@ def get_data(manifest):
                                           language='en')
                     package[counter]['statements'].append(statement_title)
 
-                    if len(t < 250):
+                    if len(t) < 250:
                         package[counter]['label'] = t
 
             if 'articleids' in pubmed_data:
